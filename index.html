@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Timer App</title>
+    <!-- Google Fonts for modern typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- CSS Variables for Theming --- */
+        :root {
+            /* Light Mode Defaults */
+            --bg-color-light: #f4f7fa;
+            --text-color-light: #333;
+            --container-bg-light: #ffffff;
+            --shadow-light: rgba(0, 0, 0, 0.1);
+            --button-bg-light: #e0e0e0;
+            --button-text-light: #333;
+            --button-hover-light: #d0d0d0;
+
+            /* Action Colors (consistent across themes for visibility) */
+            --primary-color: #007bff; /* For Set Timer button */
+            --success-color: #28a745; /* For Start button, Progress ring */
+            --warning-color: #ffc107; /* For Pause button */
+            --danger-color: #dc3545; /* For Reset button */
+
+            --progress-bg-light: #e6e6e6; /* Progress ring background */
+            --progress-color-light: var(--success-color); /* Progress ring foreground */
+
+            /* Currently active theme variables */
+            --bg-color: var(--bg-color-light);
+            --text-color: var(--text-color-light);
+            --container-bg: var(--container-bg-light);
+            --shadow: var(--shadow-light);
+            --button-bg: var(--button-bg-light);
+            --button-text: var(--button-text-light);
+            --button-hover: var(--button-hover-light);
+            --progress-bg: var(--progress-bg-light);
+            --progress-color: var(--progress-color-light);
+        }
+
+        /* Dark Mode Overrides */
+        .dark-mode {
+            --bg-color-dark: #2c3e50;
+            --text-color-dark: #ecf0f1;
+            --container-bg-dark: #34495e;
+            --shadow-dark: rgba(0, 0, 0, 0.3);
+            --button-bg-dark: #4a627a;
+            --button-text-dark: #ecf0f1;
+            --button-hover-dark: #5a748c;
+
+            --progress-bg-dark: #4a627a;
+            --progress-color-dark: var(--success-color); /* Keep success color for visibility */
+
+            /* Apply dark mode variables */
+            --bg-color: var(--bg-color-dark);
+            --text-color: var(--text-color-dark);
+            --container-bg: var(--container-bg-dark);
+            --shadow: var(--shadow-dark);
+            --button-bg: var(--button-bg-dark);
+            --button-text: var(--button-text-dark);
+            --button-hover: var(--button-hover-dark);
+            --progress-bg: var(--progress-bg-dark);
+            --progress-color: var(--progress-color-dark);
+        }
+
+        /* --- Base Styles --- */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            overflow: hidden; /* Prevent scrollbar issues during animations */
+        }
+
+        .timer-container {
+            background-color: var(--container-bg);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px var(--shadow);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 25px;
+            max-width: 400px;
+            width: 90%; /* Responsive width */
+            position: relative;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* --- Dark Mode Toggle Switch --- */
+        .theme-toggle-wrapper {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .theme-toggle {
+            display: none; /* Hide default checkbox */
+        }
+
+        .toggle-label {
+            width: 45px;
+            height: 24px;
+            background-color: var(--button-bg);
+            border-radius: 12px;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.1); /* Inner shadow for depth */
+        }
+
+        .toggle-label::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 18px;
+            height: 18px;
+            background-color: #fff; /* White circle */
+            border-radius: 50%;
+            transition: left 0.3s ease, background-color 0.3s ease, transform 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Shadow for the knob */
+        }
+
+        .theme-toggle:checked + .toggle-label {
+            background-color: var(--primary-color);
+        }
+
+        .theme-toggle:checked + .toggle-label::after {
+            left: calc(100% - 21px); /* Move knob to the right */
+        }
+
+        /* --- Progress Ring (SVG) --- */
+        .progress-ring-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .progress-ring {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform: rotate(-90deg); /* Start progress from the top */
+        }
+
+        .progress-ring-circle-bg {
+            stroke: var(--progress-bg);
+            transition: stroke 0.3s ease; /* Smooth color change with theme */
+        }
+
+        .progress-ring-circle-progress {
+            stroke: var(--progress-color);
+            transition: stroke-dashoffset 1s linear, stroke 0.3s ease; /* Smooth progress update */
+        }
+
+        .time-display {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 3.5em; /* Large digital font */
+            font-weight: 700;
+            color: var(--text-color);
+            position: relative;
+            z-index: 1; /* Ensure text is above SVG */
+            transition: color 0.3s ease;
+            text-align: center;
+            user-select: none; /* Prevent selection of time */
+        }
+
+        /* --- Controls Section --- */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            align-items: center;
+        }
+
+        #countdown-input {
+            width: 100%;
+            max-width: 200px;
+            padding: 12px 15px;
+            border: 1px solid var(--button-bg);
+            border-radius: 10px;
+            font-size: 1em;
+            text-align: center;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            outline: none;
+            transition: border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease;
+            -moz-appearance: textfield; /* Hide arrows in Firefox */
+        }
+
+        /* Hide number input arrows in Webkit browsers (Chrome, Safari) */
+        #countdown-input::-webkit-outer-spin-button,
+        #countdown-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        #countdown-input::placeholder {
+            color: var(--text-color);
+            opacity: 0.7;
+        }
+        
+        #countdown-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+        }
+
+        /* --- Action Buttons --- */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap; /* Allow buttons to wrap on small screens */
+            justify-content: center;
+            width: 100%;
+        }
+
+        .button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease, color 0.2s ease;
+            box-shadow: 0 4px 10px var(--shadow); /* Soft shadow */
+            color: var(--button-text);
+            background-color: var(--button-bg);
+            flex-grow: 1; /* Allow buttons to grow to fill space */
+            max-width: 120px; /* Limit max width for aesthetic balance */
+            user-select: none; /* Prevent text selection */
+        }
+
+        .button:hover:not(:disabled) {
+            transform: translateY(-2px); /* Slight lift on hover */
+            box-shadow: 0 6px 15px var(--shadow);
+        }
+
+        .button:active:not(:disabled) {
+            transform: translateY(0); /* Press effect */
+            box-shadow: 0 2px 5px var(--shadow);
+        }
+
+        .button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            box-shadow: none; /* No shadow when disabled */
+        }
+
+        /* Specific button styles based on action type */
+        .button.primary {
+            background-color: var(--primary-color);
+            color: #fff;
+        }
+        .button.primary:hover:not(:disabled) {
+            background-color: #0069d9;
+        }
+
+        .button.success {
+            background-color: var(--success-color);
+            color: #fff;
+        }
+        .button.success:hover:not(:disabled) {
+            background-color: #218838;
+        }
+
+        .button.warning {
+            background-color: var(--warning-color);
+            color: #333; /* Darker text for warning color for better contrast */
+        }
+        .button.warning:hover:not(:disabled) {
+            background-color: #e0a800;
+        }
+
+        .button.danger {
+            background-color: var(--danger-color);
+            color: #fff;
+        }
+        .button.danger:hover:not(:disabled) {
+            background-color: #c82333;
+        }
+
+        /* --- Mobile Responsiveness --- */
+        @media (max-width: 480px) {
+            .timer-container {
+                padding: 30px 20px;
+                gap: 20px;
+            }
+
+            .time-display {
+                font-size: 3em; /* Slightly smaller font for small screens */
+            }
+
+            .action-buttons {
+                flex-direction: column; /* Stack buttons vertically */
+                gap: 10px;
+            }
+            .button {
+                max-width: 100%; /* Full width buttons on small screens */
+            }
+            .theme-toggle-wrapper {
+                top: 15px;
+                right: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="timer-container">
+        <!-- Dark mode toggle switch -->
+        <div class="theme-toggle-wrapper">
+            <input type="checkbox" id="theme-toggle" class="theme-toggle">
+            <label for="theme-toggle" class="toggle-label" aria-label="Toggle dark mode"></label>
+        </div>
+
+        <!-- Progress ring and Time display -->
+        <div class="progress-ring-container">
+            <svg class="progress-ring" width="200" height="200">
+                <!-- Background circle (static) -->
+                <circle class="progress-ring-circle-bg" stroke="var(--progress-bg)" stroke-width="8" fill="transparent" r="90" cx="100" cy="100"/>
+                <!-- Progress circle (animated) -->
+                <circle class="progress-ring-circle-progress" stroke="var(--progress-color)" stroke-width="8" fill="transparent" r="90" cx="100" cy="100"/>
+            </svg>
+            <div class="time-display" id="time-display">00:00:00</div>
+        </div>
+
+        <!-- Custom time input and Set Timer button -->
+        <div class="controls">
+            <input type="number" id="countdown-input" placeholder="Set minutes (e.g., 25)" min="1" value="25" aria-label="Set countdown minutes">
+            <button id="set-time-btn" class="button primary">Set Timer</button>
+        </div>
+
+        <!-- Timer control buttons -->
+        <div class="action-buttons">
+            <button id="start-btn" class="button success">Start</button>
+            <button id="pause-btn" class="button warning" disabled>Pause</button>
+            <button id="reset-btn" class="button danger">Reset</button>
+        </div>
+    </div>
+
+    <!-- Hidden audio element for sound alert (using a public domain sound) -->
+    <!-- For production, consider hosting this asset locally for reliability. -->
+    <audio id="timer-beep" src="https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3" preload="auto"></audio>
+
+    <script>
+        // --- DOM Element References ---
+        const timeDisplay = document.getElementById('time-display');
+        const countdownInput = document.getElementById('countdown-input');
+        const setTimeBtn = document.getElementById('set-time-btn');
+        const startBtn = document.getElementById('start-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const timerBeep = document.getElementById('timer-beep');
+        const themeToggle = document.getElementById('theme-toggle');
+        const progressRing = document.querySelector('.progress-ring-circle-progress');
+
+        // --- Timer State Variables ---
+        let timerInterval;
+        let totalTime = 0; // Total seconds for the currently set countdown
+        let timeLeft = 0; // Remaining seconds for the current countdown
+        let initialTotalTime = 25 * 60; // Default to 25 minutes (1500 seconds)
+        let isRunning = false;
+        let isPaused = false;
+
+        // --- Progress Ring Constants ---
+        const radius = 90; // Matches 'r' attribute in SVG circle
+        const circumference = 2 * Math.PI * radius;
+        progressRing.style.strokeDasharray = `${circumference} ${circumference}`; // Defines dashed line (full circle and gap)
+        progressRing.style.strokeDashoffset = circumference; // Initially hides the progress (full offset)
+
+        // --- Utility Functions ---
+
+        /**
+         * Formats a given number of seconds into HH:MM:SS string.
+         * @param {number} seconds - The total seconds to format.
+         * @returns {string} Formatted time string (e.g., "00:25:00").
+         */
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+
+            const pad = (num) => num.toString().padStart(2, '0');
+            return `${pad(h)}:${pad(m)}:${pad(s)}`;
+        }
+
+        /**
+         * Updates the time display and the circular progress bar.
+         */
+        function updateDisplay() {
+            timeDisplay.textContent = formatTime(timeLeft);
+            updateProgressBar();
+        }
+
+        /**
+         * Calculates and updates the stroke-dashoffset for the circular progress bar.
+         */
+        function updateProgressBar() {
+            if (totalTime === 0) { // Avoid division by zero, set to empty if no time set
+                progressRing.style.strokeDashoffset = circumference;
+                return;
+            }
+            // Calculate remaining percentage and set offset
+            const offset = circumference - (timeLeft / totalTime) * circumference;
+            progressRing.style.strokeDashoffset = offset;
+        }
+
+        /**
+         * Requests browser notification permission if not already granted or denied.
+         */
+        function requestNotificationPermission() {
+            if (!("Notification" in window)) {
+                console.warn("This browser does not support desktop notification");
+            } else if (Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        }
+
+        /**
+         * Shows a browser notification.
+         * @param {string} title - The title of the notification.
+         * @param {string} body - The body text of the notification.
+         */
+        function showNotification(title, body) {
+            if (Notification.permission === 'granted') {
+                // Using a generic bell icon from flaticon.com (public domain)
+                new Notification(title, { body: body, icon: 'https://cdn-icons-png.flaticon.com/512/3592/3592817.png' }); 
+            }
+        }
+
+        // --- Timer Control Functions ---
+
+        /**
+         * Starts or resumes the timer countdown.
+         */
+        function startTimer() {
+            if (isRunning && !isPaused) return; // Already running
+
+            // If timer expired or not yet set, initialize it
+            if (timeLeft <= 0 && initialTotalTime > 0) {
+                timeLeft = initialTotalTime;
+                totalTime = initialTotalTime; // Ensure totalTime is correctly set for progress bar
+            } else if (timeLeft <= 0) { // If no time is set at all
+                alert("Please set a timer duration first!");
+                return;
+            }
+
+            isRunning = true;
+            isPaused = false;
+
+            // Disable/enable appropriate buttons
+            startBtn.disabled = true;
+            pauseBtn.disabled = false;
+            setTimeBtn.disabled = true;
+            countdownInput.disabled = true;
+
+            timerInterval = setInterval(() => {
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    timerBeep.play(); // Play sound alert
+                    showNotification("Timer Done!", "Your countdown has finished."); // Show notification
+                    resetTimerState(true); // Reset state to initial time after completion
+                    return;
+                }
+                timeLeft--;
+                updateDisplay(); // Update time and progress bar every second
+            }, 1000);
+        }
+
+        /**
+         * Pauses the running timer.
+         */
+        function pauseTimer() {
+            if (!isRunning) return; // Not running, nothing to pause
+            clearInterval(timerInterval);
+            isPaused = true;
+            isRunning = false;
+
+            // Disable/enable appropriate buttons
+            startBtn.disabled = false;
+            pauseBtn.disabled = true;
+        }
+
+        /**
+         * Resets the timer to its initial set time.
+         * @param {boolean} afterCompletion - True if called automatically after timer reaches zero.
+         */
+        function resetTimerState(afterCompletion = false) {
+            clearInterval(timerInterval); // Stop any running interval
+            isRunning = false;
+            isPaused = false;
+
+            // Reset time to the initially set value
+            timeLeft = initialTotalTime;
+            totalTime = initialTotalTime;
+
+            updateDisplay(); // Update display to show reset time
+
+            // Enable/disable appropriate buttons
+            startBtn.disabled = false;
+            pauseBtn.disabled = true;
+            setTimeBtn.disabled = false;
+            countdownInput.disabled = false;
+        }
+
+        /**
+         * Sets a custom countdown time from the input field.
+         */
+        function setCustomTime() {
+            const minutes = parseInt(countdownInput.value, 10);
+
+            if (isNaN(minutes) || minutes <= 0) {
+                alert("Please enter a valid number of minutes (greater than 0).");
+                countdownInput.value = Math.max(1, Math.ceil(initialTotalTime / 60)); // Reset to last valid or 1
+                return;
+            }
+
+            // Stop any running timer before setting new time
+            clearInterval(timerInterval);
+            isRunning = false;
+            isPaused = false;
+
+            initialTotalTime = minutes * 60; // Store in seconds
+            timeLeft = initialTotalTime;
+            totalTime = initialTotalTime; // totalTime also needs to be updated for progress bar calculation
+
+            updateDisplay(); // Display the new time
+            
+            // Buttons state after setting new time
+            startBtn.disabled = false;
+            pauseBtn.disabled = true;
+            setTimeBtn.disabled = false;
+            countdownInput.disabled = false;
+        }
+
+        // --- Event Listeners ---
+        startBtn.addEventListener('click', startTimer);
+        pauseBtn.addEventListener('click', pauseTimer);
+        resetBtn.addEventListener('click', () => resetTimerState(false)); // Manual reset
+        setTimeBtn.addEventListener('click', setCustomTime);
+        countdownInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                setCustomTime();
+            }
+        });
+
+        // --- Dark Mode Logic ---
+        /**
+         * Enables dark mode by adding the 'dark-mode' class to the root element.
+         * Stores preference in localStorage.
+         */
+        function enableDarkMode() {
+            document.documentElement.classList.add('dark-mode');
+            localStorage.setItem('darkMode', 'enabled');
+            themeToggle.checked = true; // Ensure toggle switch reflects state
+        }
+
+        /**
+         * Disables dark mode by removing the 'dark-mode' class from the root element.
+         * Stores preference in localStorage.
+         */
+        function disableDarkMode() {
+            document.documentElement.classList.remove('dark-mode');
+            localStorage.setItem('darkMode', 'disabled');
+            themeToggle.checked = false; // Ensure toggle switch reflects state
+        }
+
+        themeToggle.addEventListener('change', () => {
+            if (themeToggle.checked) {
+                enableDarkMode();
+            } else {
+                disableDarkMode();
+            }
+        });
+
+        // --- Initial Setup on Page Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Apply dark mode preference from localStorage
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                enableDarkMode();
+            } else {
+                disableDarkMode(); // Explicitly set light mode if no preference or 'disabled'
+            }
+
+            // 2. Initialize timer with default or input value
+            // This reads the 'value' attribute of the input (default 25)
+            setCustomTime(); 
+            
+            // 3. Request notification permission (non-blocking)
+            requestNotificationPermission();
+        });
+    </script>
+</body>
+</html>
